@@ -371,7 +371,7 @@ struct ContentView: View {
             .padding(8)
             .background(backgroundColor.opacity(powerUp.cooldown == 0 ? 0.8 : 0.4))
             .cornerRadius(10) // Slightly increased corner radius for better aesthetics
-            .onLongPressGesture(minimumDuration: 0.5) {
+            .onLongPressGesture(minimumDuration: 0.3) {
                 showDescriptionAction(powerUp.description)
             }
         }
