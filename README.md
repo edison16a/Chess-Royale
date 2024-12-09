@@ -4,71 +4,34 @@
 
 ---
 
-## Features
+## App Store Description
 
-### 🎮 **Core Gameplay**
-- Classic chess rules with a modern interface built in **SwiftUI**.
-- Play as **Player One (White)** or **Player Two (Black)** with seamless turn-based mechanics.
+Chess Royale: Power-Up Chess
+Developed By Edison Law and Revaant Srivastav
 
-### 🔥 **Power-Ups**
-- Unlock and use **Rare**, **Epic**, and **Legendary** power-ups to gain a strategic edge.
-- Power-up effects include game-changing abilities like:
-  - **Atomicus!**: Explode in a 3x3 area when captured. 💥
-  - **Extra Turn**: Take two moves in a row. 🚀
-  - **Pawndimonium**: Temporarily capture like a pawn. ♟️
-  - **Frozen Assets**: Freeze enemy pieces for a turn. ❄️
-  - And many more!
-- Power-up rarities:
-  - **Rare**: Green background.
-  - **Epic**: Purple background.
-  - **Legendary**: Orange background.
+Enter the battlefield of Chess Royale, where traditional chess meets a thrilling twist! Designed for two players, this revolutionary chess game introduces power-ups that completely redefine strategy and gameplay. Whether you're a seasoned chess player or new to the game, Chess Royale guarantees a fresh and exhilarating experience every time you play. Its also different as you don't get checked and only loose if your king is captured.
 
-### 🎨 **Dynamic UI**
-- Responsive board design with a visually appealing layout.
-- Power-ups are displayed with:
-  - Rounded square backgrounds indicating rarity.
-  - Intuitive icons for each ability.
-  - Cooldown indicators for strategic timing.
+Say goodbye to predictable moves and hello to unexpected twists and tactical chaos. Developed by Edison Law and Revaant Srivastav, Chess Royale is more fun, competitive, and engaging than regular chess!
 
-### 🔄 **Roll & Refresh System**
-- Players can roll to acquire new power-ups, adding an element of randomness and replayability.
-- Limited roll counts ensure strategic resource management.
+Key Features:
 
-### 🤖 **Player Strategy**
-- Decide when to activate power-ups or save them for critical moments.
-- Outwit your opponent with the perfect combination of classic chess skills and tactical power-up use.
+Classic Chess Reimagined: All the strategy of traditional chess, combined with exciting power-ups to keep you on your toes.
 
----
+Unique Power-Ups: Unlock and activate over 20 game-changing power-ups, such as:
 
-## Installation
+Extra Turn: Play two moves in a row to outmaneuver your opponent.
+Pawnzilla: Spawn an extra pawn in the same row for an offensive boost.
+Atomicus!: Explode in a 3x3 radius when captured, wreaking havoc on the board.
+Rook 'n' Roll: Grant two pieces the power to move like rooks for a turn.
+Triple Turn: Take three consecutive moves and dominate the board.
+Pawndimonium: Temporarily transform pieces to capture like pawns.
+Port-A-Piece: Teleport your piece to any free square on the board.
+Knightmare Fuel: Let knights move like queens for a turn and surprise your rival.
+Two-Player Mode: Perfect for friends, family, or rivals—challenge your opponent in real-time and prove your tactical supremacy.
 
-1. Clone this repository:
-   ```bash
-   git clone https://github.com/your-username/power-up-chess.git
-   cd power-up-chess
-   ```
-2. Open the project in **Xcode**.
-3. Build and run the app on a simulator or a connected iOS device.
+Fun for All Skill Levels: Whether you're a chess grandmaster or just learning the ropes, Chess Royale adds a unique layer of excitement to every match.
 
----
-
-## How to Play
-
-1. **Start the Game**:
-   - Player One (White) and Player Two (Black) begin with standard chess pieces on an 8x8 board.
-
-2. **Use Power-Ups**:
-   - Activate power-ups by selecting them from your power-up bar.
-   - Plan ahead! Some power-ups have cooldown periods after use.
-
-3. **Win the Game**:
-   - Checkmate your opponent while leveraging your power-ups for maximum impact.
-
----
-
-## Screenshots
-
-*Include screenshots or a demo GIF showcasing the app's UI and features.*
+Experience the most electrifying chess game ever created. Power up, strategize, and checkmate your way to victory in Chess Royale!
 
 ---
 
