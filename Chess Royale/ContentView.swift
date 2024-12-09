@@ -252,7 +252,7 @@ struct ContentView: View {
                             }
                             if let piece = board[row][col] {
                                 Text(pieceSymbol(piece))
-                                    .font(.system(size: 24))
+                                    .font(.system(size: 35))
                                     .foregroundColor(piece.color == .white ? .blue : .red)
                             }
                         }
@@ -1178,12 +1178,12 @@ struct ContentView: View {
     
     private func pieceSymbol(_ piece: ChessPiece) -> String {
         switch (piece.type, piece.color) {
-        case (.pawn, .white): return "♙"
-        case (.rook, .white): return "♖"
-        case (.knight, .white): return "♘"
-        case (.bishop, .white): return "♗"
-        case (.queen, .white): return "♕"
-        case (.king, .white): return "♔"
+        case (.pawn, .white): return "♟︎"
+        case (.rook, .white): return "♜"
+        case (.knight, .white): return "♞"
+        case (.bishop, .white): return "♝"
+        case (.queen, .white): return "♛"
+        case (.king, .white): return "♚"
             
         case (.pawn, .black): return "♟︎"
         case (.rook, .black): return "♜"
