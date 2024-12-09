@@ -89,6 +89,4 @@
 - Built with ❤️ using **SwiftUI**.
 - Inspired by traditional chess and modern strategy games.
 
----
 
-Feel free to customize the description further based on your preferences or additional features!
