@@ -130,6 +130,11 @@ struct ContentView: View {
     // ADDED: We'll introduce a gameMode to handle menu, singleplayer, multiplayer, and catalog
     @State private var gameMode: GameMode = .menu
     
+    @State private var currentLogoIndex = 0
+    let logoImages = ["logo"] + (1...38).map { "logo \($0)" }
+
+    let logoTimer = Timer.publish(every: 2, on: .main, in: .common).autoconnect()
+    
     // MARK: - Modified PowerUp Pools with new abilities
     
     var rarePowers = [
@@ -313,12 +318,22 @@ struct ContentView: View {
                 .font(.largeTitle)
                 .padding()
             
-            Image("logo") // Assuming logo.png is in assets
-                .resizable()
-                .scaledToFit()
-                .frame(width: 300, height: 300)
-                .cornerRadius(10)
-                .padding(20)
+            ZStack {
+                ForEach(0..<logoImages.count, id: \.self) { index in
+                    Image(logoImages[index])
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 300, height: 300)
+                        .cornerRadius(10)
+                        .opacity(currentLogoIndex == index ? 1 : 0)
+                        .animation(.easeInOut(duration: 1.0), value: currentLogoIndex)
+                }
+            }
+            .frame(width: 300, height: 300)
+            .padding(20)
+            .onReceive(logoTimer) { _ in
+                currentLogoIndex = (currentLogoIndex + 1) % logoImages.count
+            }
             
             Text("Play Options")
                 .font(.headline)
