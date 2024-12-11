@@ -1,17 +1,17 @@
 {
   "images" : [
     {
-      "filename" : "Shoot, Where, Where?.png",
+      "filename" : "shootware.png",
       "idiom" : "universal",
       "scale" : "1x"
     },
     {
-      "filename" : "Shoot, Where, Where? 1.png",
+      "filename" : "shootware 1.png",
       "idiom" : "universal",
       "scale" : "2x"
     },
     {
-      "filename" : "Shoot, Where, Where? 2.png",
+      "filename" : "shootware 2.png",
       "idiom" : "universal",
       "scale" : "3x"
     }

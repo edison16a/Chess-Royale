@@ -131,13 +131,8 @@ struct ContentView: View {
     @State private var gameMode: GameMode = .menu
     
     // MARK: - Modified PowerUp Pools with new abilities
-    // 1 Legendary: "TimeStop"
-    // 2 Epic: "Shield Wall", "Teleportation"
-    // 2 Rare: "Iron Boots", "Bargain Hunter"
-    // ADDED: Exotic Powers
     
     var rarePowers = [
-        ("Extra Turn", "Lets you take two consecutive moves before the turn passes to your opponent.", "Rare"),
         ("Pawnzilla", "Finds one of your pawns and spawns a second pawn in the same row if space is available.", "Rare"),
         ("Backpedal", "Moves one of your pieces backward by one square if the space is free.", "Rare"),
         ("Pawndemic", "Selects one of your pawns, moves it backward by one square, and captures any adjacent enemy pieces.", "Rare"),
@@ -146,10 +141,13 @@ struct ContentView: View {
         ("Reboot", "Brings back a new pawn in your back row if space is available (like resurrecting a captured pawn).", "Rare"),
         ("Copycat", "Moves two of your pawns forward one square each, if possible.", "Rare"),
         ("Iron Boots", "Prevents 3 random enemy pawns from moving forward this turn. 🥾 symbol on affected pawns", "Rare"),
+        ("Teleportation", "Choose one of your pieces and then choose an empty square to teleport it there.", "Rare"),
         ("Bargain Hunter", "Resets all your bishops and knights to their original positions and refreshes your powers.", "Rare")
     ]
     
     var epicPowers = [
+        
+        ("Extra Turn", "Lets you take two consecutive moves before the turn passes to your opponent.", "Epic"),
         ("Pawndimonium", "Your pawns can capture like a king for your next capture. 🤴 symbol on pawns.", "Epic"),
         ("Frozen Assets", "Freezes all enemy queens and rooks for TWO turns now, preventing them from moving. A ❄️ symbol will appear on them.", "Epic"),
         ("Knightmare Fuel", "All your knights move like queens for one turn and show a 👑 symbol.", "Epic"),
@@ -158,24 +156,33 @@ struct ContentView: View {
         ("Rook 'n' Roll", "Two of your pieces move like rooks for one turn. 🗼 symbol shown.", "Epic"),
         ("Puppet Strings", "Moves an enemy knight or bishop next to your closest pawn diagonally so it can be captured.", "Epic"),
         ("Grand Finale", "Over the next 3 turns, one random enemy piece is killed each turn.", "Epic"),
-        ("Triple Turn", "Allows you to take three consecutive moves before your opponent's turn.", "Epic"),
         ("Pawno-Kinetic", "Moves all your pawns forward two squares if the spaces are free.", "Epic"),
         ("Shield Wall", "Protect all your pieces from being captured for 1 turn. 🛡️ symbol shown on your pieces.", "Epic"),
-        ("Teleportation", "Choose one of your pieces and then choose an empty square to teleport it there.", "Epic")
+        
+         
+        ("Shapeshifter", "Select one of your own pieces to shapeshift into another piece type (Rook, Knight, Bishop) for 3 turns. 🦊 symbol.", "Epic"),
+        ("Royal Jester", "Select one enemy piece and transform it into a pawn for 2 turns, marked with 🤡", "Epic"),
+        ("Blitz Surge", "Randomly teleport 3 of your own pieces to empty squares on your side of the board, marked with ⚡ for 1 turn.", "Epic"),
+        ("Ancient Guardian", "Choose one of your pieces to become immovable and invincible for 3 turns, marked with 🗿.", "Epic"),
+        ("Mind Control", "Choose an enemy piece and move it this turn as if it were yours, showing 🌀 symbol.", "Epic")
     ]
     
     var legendaryPowers = [
         ("Atomicus!", "If one of your pieces is captured, it explodes and removes surrounding pieces in a 3x3 area.", "Legendary"),
+        ("Triple Turn", "Allows you to take three consecutive moves before your opponent's turn.", "Legendary"),
         ("Rookie Mistake", "All your pawns move like rooks for 2 rounds. 🚀 symbol shown on them.", "Legendary"),
         ("Check That Out", "Deletes two random pieces around the enemy's king.", "Legendary"),
         ("I Ocean You", "Captures up to four random enemy pawns in a single wave.", "Legendary"),
-        ("TimeStop", "Freezes 90% of enemy pieces for 2 turns.", "Legendary")
+        ("TimeStop", "Freezes 90% of enemy pieces for 2 turns.", "Legendary"),
+        ("Aura", "Choose a piece on the board and all enemy pieces surrounding it will be frozen for 2 turns. ❄️ shown.", "Legendary"),
+        ("Lock In", "Choose a piece on the board to lock it with a shield for 5 rounds. Shows 🏰 symbol. It can't be captured during this time.", "Legendary"),
+        ("It Says Gullible", "Allows you to choose an enemy piece, and the 3x3 area around that piece will be frozen for 5 moves (show a 🥶 symbol).", "Legendary")
     ]
     
-    // ADDED: Exotic Powers
     var exoticPowers = [
         ("Shoot, Where, Where?", "Allows you to choose one of your own pieces, and all squares directly in front of that piece (in the piece’s forward direction) will be cleared of any pieces.", "Exotic"),
-        ("It Says Gullible", "Allows you to choose an enemy piece, and the 3x3 area around that piece will be frozen for 5 moves (show a 🥶 symbol).", "Exotic")
+        ("Pawnder That", "For 1 turn, all your pawns become queens and explode in a 3x3 area upon capturing, showing 💣 symbol.", "Exotic"),
+        ("Dark Reaper", "Select one piece and grant it a scythe ☠️ permanently, allowing it to also delete a 1x3 area in front each round.", "Exotic")
     ]
     
     // ADDED FOR REQUESTED CHANGES
@@ -221,23 +228,85 @@ struct ContentView: View {
         "Tip 19: Keep an eye on your opponent’s powers, anticipating how they might counter your plans.",
         "Tip 20: Practice with different power combinations to learn subtle interactions and dominate the board."
     ]
+    
+    // ADDED: ELO and Global Ranking using @AppStorage for persistence
+    @AppStorage("playerElo") private var playerElo: Int = 800
+    @AppStorage("globalRanking") private var globalRanking: Int = 22943
+    
+    // ADDED: Cooldown states for Refresh abilities
+    @State private var playerOneRefreshCooldown: Int = 0
+    @State private var playerTwoRefreshCooldown: Int = 0
+    
+    // ADDED NEW POWER STATES:
+    @State private var auraSelectionActive = false
+    @State private var auraSelectingPlayer: Player? = nil
+    @State private var auraPhase = 0
+    
+    @State private var lockInSelectionActive = false
+    @State private var lockInSelectingPlayer: Player? = nil
+    @State private var lockInPhase = 0
+    @State private var lockedInPieces: [(Position, Int)] = []
+    
+    @State private var reaperSelectionActive = false
+    @State private var reaperSelectingPlayer: Player? = nil
+    @State private var reaperPhase = 0
+    @State private var reaperPieces: [UUID] = []
+    
+    @State private var pawnderThatForWhite = 0
+    @State private var pawnderThatForBlack = 0
+    
+    // ADDED NEW EPIC POWERS (5 new ones):
+    // 1. Shapeshifter
+    @State private var shapeshifterSelectionActive = false
+    @State private var shapeshifterSelectingPlayer: Player? = nil
+    @State private var shapeshifterPhase = 0
+    // Store shapeshifted pieces as: position -> (originalType, turnsRemaining)
+    @State private var shapeshiftedPieces: [(Position, PieceType, Int)] = []
 
+    // 2. Royal Jester
+    @State private var royalJesterSelectionActive = false
+    @State private var royalJesterSelectingPlayer: Player? = nil
+    @State private var royalJesterPhase = 0
+    // Store royal jester transformed pieces: position -> (originalType, turnsRemaining)
+    @State private var royalJesterPieces: [(Position, PieceType, Int)] = []
+
+    // 3. Blitz Surge
+    @State private var blitzSurgeForWhite = 0
+    @State private var blitzSurgeForBlack = 0
+    // Marked pieces with ⚡ for 1 turn - just store a turn count indicator if needed
+    // We'll just mark them immediately and next turn they lose symbol
+
+    // 4. Ancient Guardian
+    @State private var ancientGuardianSelectionActive = false
+    @State private var ancientGuardianSelectingPlayer: Player? = nil
+    @State private var ancientGuardianPhase = 0
+    // ancient guardians: position -> turns
+    @State private var ancientGuardianPieces: [(Position, Int)] = []
+
+    // 5. Mind Control
+    @State private var mindControlSelectionActive = false
+    @State private var mindControlSelectingPlayer: Player? = nil
+    @State private var mindControlPhase = 0
+    @State private var mindControlSelectedEnemy: Position? = nil
+    // If a piece is under mind control this turn, we treat it as if it's player's piece until move done
+    @State private var mindControlActive = false
 
     var body: some View {
-        // ADDED: Main content now depends on gameMode
-        switch gameMode {
-        case .menu:
-            menuView
-        case .singleplayer:
-            singlePlayerView
-        case .multiplayer:
-            multiPlayerView
-        case .catalog:
-            catalogView
+        // ADDED: Main content now depends on gameMode and wrapped in ScrollView
+        ScrollView {
+            switch gameMode {
+            case .menu:
+                menuView
+            case .singleplayer:
+                singlePlayerView
+            case .multiplayer:
+                multiPlayerView
+            case .catalog:
+                catalogView
+            }
         }
     }
     
-    // ADDED: Main menu view
     private var menuView: some View {
         VStack {
             Text("Ultimate Chess Royale")
@@ -259,25 +328,38 @@ struct ContentView: View {
                 .font(.subheadline)
                 .padding()
                 .multilineTextAlignment(.center)
-                // Every 3 seconds, update the currentTipIndex
                 .onReceive(Timer.publish(every: 3, on: .main, in: .common).autoconnect()) { _ in
                     currentTipIndex = (currentTipIndex + 1) % tips.count
                 }
             
-            Button("Play Online 1v1") {
-                // Set up singleplayer mode (White = Human, Black = Bot)
+            Text("ELO: \(playerElo)")
+                .font(.headline)
+                .padding(.top, 5)
+            
+            Text("Global Ranking: \(globalRanking)")
+                .font(.subheadline)
+                .padding(.bottom, 10)
+            
+            Button("Play Ranked 1v1") {
                 setupInitialBoard()
                 playerOnePowerUps = rollNewPowerUps(count: 3)
                 playerTwoPowerUps = rollNewPowerUps(count: 3)
                 currentPlayer = .playerOne
                 gameMode = .singleplayer
+                
+                let eloGain = Int.random(in: 67...143)
+                playerElo += eloGain
+                globalRanking -= eloGain*(Int.random(in:6...14))
+                if globalRanking < 1{
+                    globalRanking = 1;
+                }
             }
             .padding()
+            .foregroundColor(.black)
             .background(Color.green.opacity(0.3))
             .cornerRadius(10)
             
             Button("2 Player Mode") {
-                // This is the original mode
                 setupInitialBoard()
                 playerOnePowerUps = rollNewPowerUps(count: 3)
                 playerTwoPowerUps = rollNewPowerUps(count: 3)
@@ -285,6 +367,7 @@ struct ContentView: View {
                 gameMode = .multiplayer
             }
             .padding()
+            .foregroundColor(.black)
             .background(Color.blue.opacity(0.3))
             .cornerRadius(10)
             
@@ -292,9 +375,9 @@ struct ContentView: View {
                 gameMode = .catalog
             }
             .padding()
+            .foregroundColor(.black)
             .background(Color.purple.opacity(0.3))
             .cornerRadius(10)
-            
             
             Spacer()
         }
@@ -303,17 +386,17 @@ struct ContentView: View {
     
     private var singlePlayerView: some View {
         VStack {
-            Button("Singleplayer: Return To Menu") {
+            Button("Ranked 1v1: Return To Menu") {
                 gameMode = .menu
             }
             .multilineTextAlignment(.center)
-
+ 
             
             Spacer()
             
             VStack {
                 Text("Black's Power-Ups (Bot)").font(.headline)
-                powerUpBar(for: .playerTwo, powerUps: $playerTwoPowerUps, rollsLeft: $playerTwoRollsLeft)
+                powerUpBar(for: .playerTwo, powerUps: $playerTwoPowerUps, rollsLeft: $playerTwoRollsLeft, refreshCooldown: $playerTwoRefreshCooldown)
             }
             .rotationEffect(.degrees(180))
             
@@ -325,7 +408,7 @@ struct ContentView: View {
             
             VStack {
                 Text("White's Power-Ups").font(.headline)
-                powerUpBar(for: .playerOne, powerUps: $playerOnePowerUps, rollsLeft: $playerOneRollsLeft)
+                powerUpBar(for: .playerOne, powerUps: $playerOnePowerUps, rollsLeft: $playerOneRollsLeft, refreshCooldown: $playerOneRefreshCooldown)
             }
         }
         .padding()
@@ -360,11 +443,15 @@ struct ContentView: View {
             Button("2 Player: Return To Menu") {
                 gameMode = .menu
             }
+ 
+            Button("Refresh Board") {
+                refreshMultiplayerBoard()
+            }
             .padding()
             
             VStack {
                 Text("Black's Power-Ups").font(.headline)
-                powerUpBar(for: .playerTwo, powerUps: $playerTwoPowerUps, rollsLeft: $playerTwoRollsLeft)
+                powerUpBar(for: .playerTwo, powerUps: $playerTwoPowerUps, rollsLeft: $playerTwoRollsLeft, refreshCooldown: $playerTwoRefreshCooldown)
             }
             .rotationEffect(.degrees(180))
             
@@ -376,11 +463,10 @@ struct ContentView: View {
             
             VStack {
                 Text("White's Power-Ups").font(.headline)
-                powerUpBar(for: .playerOne, powerUps: $playerOnePowerUps, rollsLeft: $playerOneRollsLeft)
+                powerUpBar(for: .playerOne, powerUps: $playerOnePowerUps, rollsLeft: $playerOneRollsLeft, refreshCooldown: $playerOneRefreshCooldown)
             }
         }
         .onAppear {
-            // Already handled in menu
         }
         .padding()
         .alert(isPresented: $showGameOverAlert) {
@@ -414,7 +500,7 @@ struct ContentView: View {
                 .font(.largeTitle)
                 .padding()
             
-            Text("Hold on a power to see it's description")
+            Text("Hold on a power to see its description")
                 .font(.subheadline)
                 .padding()
             
@@ -549,6 +635,170 @@ struct ContentView: View {
         gullibleSelectionActive = false
         gullibleSelectingPlayer = nil
         gulliblePhase = 0
+        
+        playerOneRefreshCooldown = 0
+        playerTwoRefreshCooldown = 0
+        
+        auraSelectionActive = false
+        auraSelectingPlayer = nil
+        auraPhase = 0
+        
+        lockInSelectionActive = false
+        lockInSelectingPlayer = nil
+        lockInPhase = 0
+        lockedInPieces = []
+        
+        reaperSelectionActive = false
+        reaperSelectingPlayer = nil
+        reaperPhase = 0
+        reaperPieces = []
+        
+        pawnderThatForWhite = 0
+        pawnderThatForBlack = 0
+
+        // ADDED NEW EPIC POWERS RESET
+        shapeshifterSelectionActive = false
+        shapeshifterSelectingPlayer = nil
+        shapeshifterPhase = 0
+        shapeshiftedPieces = []
+        
+        royalJesterSelectionActive = false
+        royalJesterSelectingPlayer = nil
+        royalJesterPhase = 0
+        royalJesterPieces = []
+        
+        blitzSurgeForWhite = 0
+        blitzSurgeForBlack = 0
+        
+        ancientGuardianSelectionActive = false
+        ancientGuardianSelectingPlayer = nil
+        ancientGuardianPhase = 0
+        ancientGuardianPieces = []
+        
+        mindControlSelectionActive = false
+        mindControlSelectingPlayer = nil
+        mindControlPhase = 0
+        mindControlSelectedEnemy = nil
+        mindControlActive = false
+    }
+    
+    private func refreshMultiplayerBoard() {
+        board = Array(repeating: Array(repeating: nil, count: 8), count: 8)
+        setupInitialBoard()
+        
+        currentPlayer = .playerOne
+        selectedPosition = nil
+        possibleMoves = []
+        
+        playerOneRollsLeft = 5
+        playerTwoRollsLeft = 5
+        
+        playerOnePowerUps = rollNewPowerUps(count: 3)
+        playerTwoPowerUps = rollNewPowerUps(count: 3)
+        
+        atomicusActiveForWhite = false
+        atomicusActiveForBlack = false
+        extraTurnActiveForWhite = false
+        extraTurnActiveForBlack = false
+        tripleTurnActiveForWhite = false
+        tripleTurnActiveForBlack = false
+        tripleWhiteTurn = 0
+        tripleBlackTurn = 0
+        pawndimoniumActiveForWhite = false
+        pawndimoniumActiveForBlack = false
+        
+        frozenEnemyPieces = []
+        knightsMoveLikeQueensForWhite = 0
+        knightsMoveLikeQueensForBlack = 0
+        pieceOutEffects = []
+        pieceOutSelectionActive = false
+        pieceOutSelectingPlayer = nil
+        
+        kingDeactivatedForWhite = 0
+        kingDeactivatedForBlack = 0
+        
+        rookRollForWhite = 0
+        rookRollForBlack = 0
+        rookRollTransformedPiecesWhite = []
+        rookRollTransformedPiecesBlack = []
+        
+        puppetStringsActiveForWhite = false
+        puppetStringsActiveForBlack = false
+        
+        grandFinaleForWhite = 0
+        grandFinaleForBlack = 0
+        
+        allPawnsRookForWhite = 0
+        allPawnsRookForBlack = 0
+        
+        chainRemovalsForWhite = 0
+        chainRemovalsForBlack = 0
+        
+        shieldWallForWhite = 0
+        shieldWallForBlack = 0
+        ironBootsAffectedPawns = []
+        
+        teleportSelectionActive = false
+        teleportSelectingPlayer = nil
+        teleportPhase = 0
+        selectedTeleportPiecePosition = nil
+        
+        shootSelectionActive = false
+        shootSelectingPlayer = nil
+        shootPhase = 0
+        shootSelectedPiece = nil
+        
+        gullibleSelectionActive = false
+        gullibleSelectingPlayer = nil
+        gulliblePhase = 0
+        
+        playerOneRefreshCooldown = 0
+        playerTwoRefreshCooldown = 0
+        
+        auraSelectionActive = false
+        auraSelectingPlayer = nil
+        auraPhase = 0
+        
+        lockInSelectionActive = false
+        lockInSelectingPlayer = nil
+        lockInPhase = 0
+        lockedInPieces = []
+        
+        reaperSelectionActive = false
+        reaperSelectingPlayer = nil
+        reaperPhase = 0
+        reaperPieces = []
+        
+        pawnderThatForWhite = 0
+        pawnderThatForBlack = 0
+        
+        gameOverMessage = ""
+        showGameOverAlert = false
+
+        // NEW EPIC POWER resets:
+        shapeshifterSelectionActive = false
+        shapeshifterSelectingPlayer = nil
+        shapeshifterPhase = 0
+        shapeshiftedPieces = []
+        
+        royalJesterSelectionActive = false
+        royalJesterSelectingPlayer = nil
+        royalJesterPhase = 0
+        royalJesterPieces = []
+        
+        blitzSurgeForWhite = 0
+        blitzSurgeForBlack = 0
+        
+        ancientGuardianSelectionActive = false
+        ancientGuardianSelectingPlayer = nil
+        ancientGuardianPhase = 0
+        ancientGuardianPieces = []
+        
+        mindControlSelectionActive = false
+        mindControlSelectingPlayer = nil
+        mindControlPhase = 0
+        mindControlSelectedEnemy = nil
+        mindControlActive = false
     }
     
     private var boardView: some View {
@@ -563,76 +813,140 @@ struct ContentView: View {
                                 Color.green.opacity(0.3)
                             }
                             if let piece = board[row][col] {
+                                // Determine symbol
                                 Text(pieceSymbol(piece))
                                     .font(.system(size: 35))
                                     .foregroundColor(piece.color == .white ? .blue : .red)
-                                
-                                if isPieceFrozen(Position(row: row, col: col)) {
-                                    // Show ❄️ or 🥶 depending on origin of freeze
-                                    // We'll show 🥶 if freeze > 2 turns or from gullible effect
-                                    // For gullible we freeze 5 moves, let's distinguish by longer freeze:
-                                    if let freezeInfo = frozenEnemyPieces.first(where: {$0.0 == Position(row: row, col: col)}) {
-                                        if freezeInfo.1 > 2 { // If we used gullible freeze of 5 moves
-                                            Text("🥶")
-                                                .font(.system(size: 20))
-                                                .offset(x: 15, y: -15)
-                                        } else {
-                                            Text("❄️")
-                                                .font(.system(size: 20))
-                                                .offset(x: 15, y: -15)
+                                    .overlay(
+                                        // ADDED: Overlapping emojis for power effects on top
+                                        ZStack {
+                                            if isPieceFrozen(Position(row: row, col: col)) {
+                                                if let freezeInfo = frozenEnemyPieces.first(where: {$0.0 == Position(row: row, col: col)}) {
+                                                    if freezeInfo.1 > 2 {
+                                                        Text("🥶")
+                                                            .font(.system(size: 20))
+                                                            .offset(x: 15, y: -15)
+                                                    } else {
+                                                        Text("❄️")
+                                                            .font(.system(size: 20))
+                                                            .offset(x: 15, y: -15)
+                                                    }
+                                                }
+                                            }
+                                            
+                                            if piece.type == .king && ((piece.color == .white && kingDeactivatedForWhite > 0) || (piece.color == .black && kingDeactivatedForBlack > 0)) {
+                                                Text("⛔")
+                                                    .font(.system(size: 20))
+                                                    .offset(x: -15, y: -15)
+                                            }
+
+                                            if piece.type == .knight {
+                                                if (piece.color == .white && knightsMoveLikeQueensForWhite > 0) || (piece.color == .black && knightsMoveLikeQueensForBlack > 0) {
+                                                    Text("👑")
+                                                        .font(.system(size: 20))
+                                                        .offset(x: 15, y: 15)
+                                                }
+                                            }
+
+                                            if (piece.color == .white && rookRollForWhite > 0 && rookRollTransformedPiecesWhite.contains(where: {$0.0 == Position(row: row, col: col)})) ||
+                                                (piece.color == .black && rookRollForBlack > 0 && rookRollTransformedPiecesBlack.contains(where: {$0.0 == Position(row: row, col: col)})) {
+                                                Text("🗼")
+                                                    .font(.system(size: 20))
+                                                    .offset(x: -15, y: 15)
+                                            }
+
+                                            if piece.type == .pawn {
+                                                if (piece.color == .white && pawndimoniumActiveForWhite) || (piece.color == .black && pawndimoniumActiveForBlack) {
+                                                    Text("🤴")
+                                                        .font(.system(size: 20))
+                                                        .offset(x: 0, y: -25)
+                                                }
+                                            }
+
+                                            if piece.type == .pawn && ironBootsAffectedPawns.contains(Position(row: row, col: col)) {
+                                                Text("⛓️")
+                                                    .font(.system(size: 20))
+                                                    .offset(x: -15, y: -25)
+                                            }
+
+                                            if (piece.color == .white && shieldWallForWhite > 0) || (piece.color == .black && shieldWallForBlack > 0) {
+                                                Text("🛡️")
+                                                    .font(.system(size: 20))
+                                                    .offset(x: 0, y: 25)
+                                            }
+
+                                            if piece.type == .pawn {
+                                                if (piece.color == .white && allPawnsRookForWhite > 0) || (piece.color == .black && allPawnsRookForBlack > 0) {
+                                                    Text("🚀")
+                                                        .font(.system(size: 20))
+                                                        .offset(x: 15, y: -15)
+                                                }
+                                            }
+
+                                            // Locked-in pieces
+                                            if lockedInPieces.contains(where: {$0.0 == Position(row: row, col: col)}) {
+                                                Text("🏰")
+                                                    .font(.system(size: 20))
+                                                    .offset(x: -15, y: 25)
+                                            }
+
+                                            // Reaper piece
+                                            if isReaperPiece(piece) {
+                                                Text("☠️")
+                                                    .font(.system(size: 20))
+                                                    .offset(x: 15, y: -25)
+                                            }
+
+                                            // Pawnder That
+                                            if piece.type == .pawn {
+                                                if (piece.color == .white && pawnderThatForWhite > 0) || (piece.color == .black && pawnderThatForBlack > 0) {
+                                                    Text("💣")
+                                                        .font(.system(size: 20))
+                                                        .offset(x: -15, y: -15)
+                                                }
+                                            }
+
+                                            // ADDED NEW EPIC POWERS SYMBOLS:
+                                            // Shapeshifter (🦊)
+                                            if shapeshiftedPieces.contains(where: {$0.0 == Position(row: row, col: col)}) {
+                                                Text("🦊")
+                                                    .font(.system(size: 20))
+                                                    .offset(x: -20, y: -20)
+                                            }
+
+                                            // Royal Jester (🤡)
+                                            if royalJesterPieces.contains(where: {$0.0 == Position(row: row, col: col)}) {
+                                                Text("🤡")
+                                                    .font(.system(size: 20))
+                                                    .offset(x: 20, y: -20)
+                                            }
+
+                                            // Blitz Surge (⚡)
+                                            if (piece.color == .white && blitzSurgeForWhite > 0) || (piece.color == .black && blitzSurgeForBlack > 0) {
+                                                // Just show ⚡ on pieces that got teleported?
+                                                // We can just show on all pieces of that player for that turn or no?
+                                                // Let's show ⚡ on all player's pieces for simplicity
+                                                Text("⚡")
+                                                    .font(.system(size: 20))
+                                                    .offset(x: -20, y: 20)
+                                            }
+
+                                            // Ancient Guardian (🗿)
+                                            if ancientGuardianPieces.contains(where: {$0.0 == Position(row: row, col: col)}) {
+                                                Text("🗿")
+                                                    .font(.system(size: 20))
+                                                    .offset(x: 20, y: 20)
+                                            }
+
+                                            // Mind Control (🌀)
+                                            if mindControlActive, let sel = mindControlSelectedEnemy, sel == Position(row: row, col: col) {
+                                                Text("🌀")
+                                                    .font(.system(size: 20))
+                                                    .offset(x: -25, y: 0)
+                                            }
                                         }
-                                    }
-                                }
-                                
-                                if piece.type == .king && ((piece.color == .white && kingDeactivatedForWhite > 0) || (piece.color == .black && kingDeactivatedForBlack > 0)) {
-                                    Text("⛔")
-                                        .font(.system(size: 20))
-                                        .offset(x: -15, y: -15)
-                                }
+                                    )
 
-                                if piece.type == .knight {
-                                    if (piece.color == .white && knightsMoveLikeQueensForWhite > 0) || (piece.color == .black && knightsMoveLikeQueensForBlack > 0) {
-                                        Text("👑")
-                                            .font(.system(size: 20))
-                                            .offset(x: 15, y: 15)
-                                    }
-                                }
-
-                                if (piece.color == .white && rookRollForWhite > 0 && rookRollTransformedPiecesWhite.contains(where: {$0.0 == Position(row: row, col: col)})) ||
-                                    (piece.color == .black && rookRollForBlack > 0 && rookRollTransformedPiecesBlack.contains(where: {$0.0 == Position(row: row, col: col)})) {
-                                    Text("🗼")
-                                        .font(.system(size: 20))
-                                        .offset(x: -15, y: 15)
-                                }
-
-                                if piece.type == .pawn {
-                                    if (piece.color == .white && pawndimoniumActiveForWhite) || (piece.color == .black && pawndimoniumActiveForBlack) {
-                                        Text("🤴")
-                                            .font(.system(size: 20))
-                                            .offset(x: 0, y: -25)
-                                    }
-                                }
-                                
-                                if piece.type == .pawn && ironBootsAffectedPawns.contains(Position(row: row, col: col)) {
-                                    Text("⛓️")
-                                        .font(.system(size: 20))
-                                        .offset(x: -15, y: -25)
-                                }
-                                
-                                if (piece.color == .white && shieldWallForWhite > 0) || (piece.color == .black && shieldWallForBlack > 0) {
-                                    Text("🛡️")
-                                        .font(.system(size: 20))
-                                        .offset(x: 0, y: 25)
-                                }
-
-                                if piece.type == .pawn {
-                                    if (piece.color == .white && allPawnsRookForWhite > 0) || (piece.color == .black && allPawnsRookForBlack > 0) {
-                                        Text("🚀")
-                                            .font(.system(size: 20))
-                                            .offset(x: 15, y: -15)
-                                    }
-                                }
-                                
                             }
                             
                             if pieceOutSelectionActive, let piece = board[row][col], piece.color != currentPlayer.color {
@@ -641,35 +955,76 @@ struct ContentView: View {
                             
                             if teleportSelectionActive {
                                 if teleportPhase == 1 {
-                                    // Selecting piece to teleport - highlight player's pieces
                                     if let piece = board[row][col], piece.color == teleportSelectingPlayer?.color {
                                         Color.yellow.opacity(0.3)
                                     }
                                 } else if teleportPhase == 2 {
-                                    // Selecting destination - highlight empty squares
                                     if board[row][col] == nil {
                                         Color.yellow.opacity(0.3)
                                     }
                                 }
                             }
                             
-                            // ADDED: Highlighting for exotic power "Shoot, Where, Where?"
                             if shootSelectionActive {
                                 if shootPhase == 1 {
-                                    // Highlight user's pieces
                                     if let piece = board[row][col], piece.color == shootSelectingPlayer?.color {
                                         Color.orange.opacity(0.3)
                                     }
                                 }
                             }
                             
-                            // ADDED: Highlighting for exotic power "It Says Gullible"
                             if gullibleSelectionActive {
                                 if gulliblePhase == 1 {
-                                    // Highlight enemy pieces (to freeze area)
                                     if let piece = board[row][col], piece.color != gullibleSelectingPlayer?.color {
                                         Color.blue.opacity(0.3)
                                     }
+                                }
+                            }
+
+                            if auraSelectionActive && auraPhase == 1 {
+                                if let _ = board[row][col] {
+                                    Color.pink.opacity(0.3)
+                                }
+                            }
+
+                            if lockInSelectionActive && lockInPhase == 1 {
+                                if let piece = board[row][col], piece.color == lockInSelectingPlayer?.color {
+                                    Color.yellow.opacity(0.3)
+                                }
+                            }
+
+                            if reaperSelectionActive && reaperPhase == 1 {
+                                if let piece = board[row][col], piece.color == reaperSelectingPlayer?.color {
+                                    Color.green.opacity(0.3)
+                                }
+                            }
+
+                            // ADDED NEW EPIC POWERS SELECTION HIGHLIGHTS:
+                            // Shapeshifter selection
+                            if shapeshifterSelectionActive && shapeshifterPhase == 1 {
+                                if let piece = board[row][col], piece.color == shapeshifterSelectingPlayer?.color {
+                                    Color.orange.opacity(0.3)
+                                }
+                            }
+
+                            // Royal Jester selection
+                            if royalJesterSelectionActive && royalJesterPhase == 1 {
+                                if let piece = board[row][col], piece.color != royalJesterSelectingPlayer?.color {
+                                    Color.purple.opacity(0.3)
+                                }
+                            }
+
+                            // Ancient Guardian selection
+                            if ancientGuardianSelectionActive && ancientGuardianPhase == 1 {
+                                if let piece = board[row][col], piece.color == ancientGuardianSelectingPlayer?.color {
+                                    Color.brown.opacity(0.3)
+                                }
+                            }
+
+                            // Mind Control selection
+                            if mindControlSelectionActive && mindControlPhase == 1 {
+                                if let piece = board[row][col], piece.color != mindControlSelectingPlayer?.color {
+                                    Color.cyan.opacity(0.3)
                                 }
                             }
                         }
@@ -684,8 +1039,8 @@ struct ContentView: View {
         }
     }
     
-    private func powerUpBar(for player: Player, powerUps: Binding<[PowerUp]>, rollsLeft: Binding<Int>) -> some View {
-        let isCurrentPlayer = (player == currentPlayer && (gameMode != .singleplayer || player == .playerOne)) // In singleplayer only white is controlled by user
+    private func powerUpBar(for player: Player, powerUps: Binding<[PowerUp]>, rollsLeft: Binding<Int>, refreshCooldown: Binding<Int>) -> some View {
+        let isCurrentPlayer = (player == currentPlayer && (gameMode != .singleplayer || player == .playerOne))
         
         return HStack {
             ForEach(powerUps.wrappedValue.indices, id: \.self) { i in
@@ -697,17 +1052,19 @@ struct ContentView: View {
                         .environment(\.showDescriptionAction, showDescription)
 
                 }
-                .disabled(!isCurrentPlayer || pUp.cooldown > 0 || pieceOutSelectionActive || teleportSelectionActive || shootSelectionActive || gullibleSelectionActive)
+                .disabled(!isCurrentPlayer || pUp.cooldown > 0 || pieceOutSelectionActive || teleportSelectionActive || shootSelectionActive || gullibleSelectionActive || auraSelectionActive || lockInSelectionActive || reaperSelectionActive || shapeshifterSelectionActive || royalJesterSelectionActive || ancientGuardianSelectionActive || mindControlSelectionActive)
             }
             
             Button(action: {
-                if rollsLeft.wrappedValue > 0 && isCurrentPlayer {
+                if rollsLeft.wrappedValue > 0 && isCurrentPlayer && refreshCooldown.wrappedValue == 0 {
                     rollsLeft.wrappedValue -= 1
                     let newUps = rollNewPowerUps(count: 3)
                     if player == .playerOne {
                         playerOnePowerUps = newUps
+                        playerOneRefreshCooldown = 2
                     } else {
                         playerTwoPowerUps = newUps
+                        playerTwoRefreshCooldown = 2
                     }
                 }
             }) {
@@ -724,7 +1081,7 @@ struct ContentView: View {
                         .font(.caption2)
                 }
             }
-            .disabled(!isCurrentPlayer || rollsLeft.wrappedValue == 0 || pieceOutSelectionActive || teleportSelectionActive || shootSelectionActive || gullibleSelectionActive)
+            .disabled(!isCurrentPlayer || rollsLeft.wrappedValue == 0 || refreshCooldown.wrappedValue > 0 || pieceOutSelectionActive || teleportSelectionActive || shootSelectionActive || gullibleSelectionActive || auraSelectionActive || lockInSelectionActive || reaperSelectionActive || shapeshifterSelectionActive || royalJesterSelectionActive || ancientGuardianSelectionActive || mindControlSelectionActive)
         }
         .padding()
         .background(isCurrentPlayer ? Color.green.opacity(0.2) : Color.gray.opacity(0.2))
@@ -745,7 +1102,6 @@ struct ContentView: View {
             case "legendary":
                 return Color.orange
             case "exotic":
-                // rainbow gradient
                 return Color.clear
             default:
                 return Color.yellow
@@ -855,13 +1211,11 @@ struct ContentView: View {
             }
         }
         
-        // Shoot, Where, Where? selection
+        // Shoot, Where, Where?
         if shootSelectionActive, let selPlayer = shootSelectingPlayer {
             if shootPhase == 1 {
-                // Choose player's piece
                 if let piece = board[row][col], piece.color == selPlayer.color {
                     shootSelectedPiece = tappedPos
-                    // Perform the effect: clear everything in front of this piece
                     clearInFront(of: tappedPos, for: piece.color)
                     shootSelectionActive = false
                     shootSelectingPlayer = nil
@@ -873,10 +1227,9 @@ struct ContentView: View {
             }
         }
         
-        // It Says Gullible selection
+        // It Says Gullible
         if gullibleSelectionActive, let selPlayer = gullibleSelectingPlayer {
             if gulliblePhase == 1 {
-                // Choose enemy piece
                 if let piece = board[row][col], piece.color != selPlayer.color {
                     freezeAreaAround(pos: tappedPos, turns: 5)
                     gullibleSelectionActive = false
@@ -888,6 +1241,7 @@ struct ContentView: View {
             }
         }
         
+        // Piece Out
         if pieceOutSelectionActive, let selPlayer = pieceOutSelectingPlayer {
             if let piece = board[row][col], piece.color != selPlayer.color {
                 board[row][col] = nil
@@ -895,6 +1249,116 @@ struct ContentView: View {
                 pieceOutSelectingPlayer = nil
                 return
             } else {
+                return
+            }
+        }
+
+        // Aura selection
+        if auraSelectionActive, let selPlayer = auraSelectingPlayer {
+            if auraPhase == 1 {
+                // Choose ANY piece
+                if let _ = board[row][col] {
+                    freezeAround(pos: tappedPos, for: selPlayer, turns: 2)
+                    auraSelectionActive = false
+                    auraSelectingPlayer = nil
+                    auraPhase = 0
+                    handleMoveEnd()
+                }
+                return
+            }
+        }
+
+        // Lock In selection
+        if lockInSelectionActive, let selPlayer = lockInSelectingPlayer {
+            if lockInPhase == 1 {
+                if let piece = board[row][col], piece.color == selPlayer.color {
+                    lockedInPieces.append((tappedPos,5))
+                    lockInSelectionActive = false
+                    lockInSelectingPlayer = nil
+                    lockInPhase = 0
+                    handleMoveEnd()
+                }
+                return
+            }
+        }
+
+        // Reaper selection
+        if reaperSelectionActive, let selPlayer = reaperSelectingPlayer {
+            if reaperPhase == 1 {
+                if let piece = board[row][col], piece.color == selPlayer.color {
+                    reaperPieces.append(piece.id)
+                    reaperSelectionActive = false
+                    reaperSelectingPlayer = nil
+                    reaperPhase = 0
+                    handleMoveEnd()
+                }
+                return
+            }
+        }
+
+        // Shapeshifter selection
+        if shapeshifterSelectionActive, let selPlayer = shapeshifterSelectingPlayer {
+            if shapeshifterPhase == 1 {
+                if let piece = board[row][col], piece.color == selPlayer.color {
+                    // shapeshift this piece
+                    let originalType = piece.type
+                    let newType: PieceType = [.rook, .knight, .bishop].randomElement()!
+                    board[row][col] = ChessPiece(type: newType, color: piece.color)
+                    shapeshiftedPieces.append((Position(row: row, col: col), originalType, 3))
+                    shapeshifterSelectionActive = false
+                    shapeshifterSelectingPlayer = nil
+                    shapeshifterPhase = 0
+                    handleMoveEnd()
+                }
+                return
+            }
+        }
+
+        // Royal Jester selection
+        if royalJesterSelectionActive, let selPlayer = royalJesterSelectingPlayer {
+            if royalJesterPhase == 1 {
+                if let piece = board[row][col], piece.color != selPlayer.color {
+                    // turn into a pawn for 2 turns
+                    let originalType = piece.type
+                    let newPiece = ChessPiece(type: .pawn, color: piece.color)
+                    board[row][col] = newPiece
+                    royalJesterPieces.append((Position(row: row, col: col), originalType, 2))
+                    royalJesterSelectionActive = false
+                    royalJesterSelectingPlayer = nil
+                    royalJesterPhase = 0
+                    handleMoveEnd()
+                }
+                return
+            }
+        }
+
+        // Ancient Guardian selection
+        if ancientGuardianSelectionActive, let selPlayer = ancientGuardianSelectingPlayer {
+            if ancientGuardianPhase == 1 {
+                if let piece = board[row][col], piece.color == selPlayer.color {
+                    ancientGuardianPieces.append((Position(row: row, col: col),3))
+                    ancientGuardianSelectionActive = false
+                    ancientGuardianSelectingPlayer = nil
+                    ancientGuardianPhase = 0
+                    handleMoveEnd()
+                }
+                return
+            }
+        }
+
+        // Mind Control selection
+        if mindControlSelectionActive, let selPlayer = mindControlSelectingPlayer {
+            if mindControlPhase == 1 {
+                if let piece = board[row][col], piece.color != selPlayer.color {
+                    // Select enemy piece to control
+                    mindControlSelectedEnemy = Position(row: row, col: col)
+                    mindControlActive = true
+                    mindControlSelectionActive = false
+                    mindControlSelectingPlayer = nil
+                    mindControlPhase = 0
+                    // Now we can move it as if ours
+                    return
+                }
                 return
             }
         }
@@ -915,6 +1379,10 @@ struct ContentView: View {
     }
     
     private func selectIfCurrentPlayersPiece(position: Position) -> Position? {
+        if mindControlActive, let enemy = mindControlSelectedEnemy, position == enemy {
+            // Mind controlled piece selected as if ours
+            return position
+        }
         if let piece = board[position.row][position.col], piece.color == currentPlayer.color {
             if piece.type == .king {
                 if (piece.color == .white && kingDeactivatedForWhite > 0) || (piece.color == .black && kingDeactivatedForBlack > 0) {
@@ -942,12 +1410,22 @@ struct ContentView: View {
         
         let capturedPiece = board[to.row][to.col]
         
-        // Shield Wall logic
-        if isCapture, let defender = capturedPiece, ((defender.color == .white && shieldWallForWhite > 0) || (defender.color == .black && shieldWallForBlack > 0)) {
-            // Can't capture this piece
-            return
+        // Check Lock In
+        if isCapture, let defender = capturedPiece {
+            if lockedInPieces.contains(where: {$0.0 == Position(row: to.row, col: to.col)}) {
+                return
+            }
+            if ((defender.color == .white && shieldWallForWhite > 0) || (defender.color == .black && shieldWallForBlack > 0)) {
+                return
+            }
+            // Check Ancient Guardian (immovable & invincible)
+            if ancientGuardianPieces.contains(where: {$0.0 == Position(row: to.row, col: to.col)}) {
+                return
+            }
         }
-        
+
+        // Pawnder That logic
+        let pawnderActive = (piece.color == .white && pawnderThatForWhite > 0) || (piece.color == .black && pawnderThatForBlack > 0)
         board[to.row][to.col] = piece
         board[from.row][from.col] = nil
         
@@ -969,7 +1447,17 @@ struct ContentView: View {
                 explodeAt(row: to.row, col: to.col)
             }
         }
+
+        if isCapture && piece.type == .pawn && pawnderActive {
+            explodeAt(row: to.row, col: to.col)
+        }
         
+        // If mind control was active, after move disable it
+        if mindControlActive {
+            mindControlActive = false
+            mindControlSelectedEnemy = nil
+        }
+
         handleMoveEnd()
     }
     
@@ -985,20 +1473,18 @@ struct ContentView: View {
             grandFinaleForBlack -= 1
         }
         
-        if currentPlayer == .playerOne && rookRollForBlack > 0 {
-            rookRollForBlack = 0
-            rookRollTransformedPiecesBlack.removeAll()
-        } else if currentPlayer == .playerTwo && rookRollForWhite > 0 {
-            rookRollForWhite = 0
-            rookRollTransformedPiecesWhite.removeAll()
-        }
-        
         if currentPlayer == .playerOne {
             if knightsMoveLikeQueensForBlack > 0 { knightsMoveLikeQueensForBlack -= 1 }
             if allPawnsRookForBlack > 0 { allPawnsRookForBlack -= 1 }
         } else {
             if knightsMoveLikeQueensForWhite > 0 { knightsMoveLikeQueensForWhite -= 1 }
             if allPawnsRookForWhite > 0 { allPawnsRookForWhite -= 1 }
+        }
+
+        if currentPlayer == .playerOne && pawnderThatForBlack > 0 {
+            pawnderThatForBlack -= 1
+        } else if currentPlayer == .playerTwo && pawnderThatForWhite > 0 {
+            pawnderThatForWhite -= 1
         }
 
         if currentPlayer == .playerOne && extraTurnActiveForWhite {
@@ -1022,6 +1508,13 @@ struct ContentView: View {
         decrementCooldowns(for: &playerOnePowerUps)
         decrementCooldowns(for: &playerTwoPowerUps)
         
+        if playerOneRefreshCooldown > 0 {
+            playerOneRefreshCooldown -= 1
+        }
+        if playerTwoRefreshCooldown > 0 {
+            playerTwoRefreshCooldown -= 1
+        }
+        
         advanceFrozenTurns()
         advancePieceOutEffects()
 
@@ -1037,7 +1530,55 @@ struct ContentView: View {
             ironBootsAffectedPawns.removeAll()
         }
 
+        for i in lockedInPieces.indices {
+            if lockedInPieces[i].1 > 0 {
+                lockedInPieces[i].1 -= 1
+            }
+        }
+        lockedInPieces = lockedInPieces.filter {$0.1 > 0}
+
+        applyReaperEffect(for: currentPlayer)
+        
+        // ADDED: Decrement Shapeshifted pieces
+        for i in shapeshiftedPieces.indices {
+            shapeshiftedPieces[i].2 -= 1
+        }
+        let revertShape = shapeshiftedPieces.filter {$0.2 == 0}
+        for rev in revertShape {
+            // revert piece type
+            if let p = board[rev.0.row][rev.0.col], p.color == currentPlayer.color || p.color == currentPlayer.opposite.color {
+                board[rev.0.row][rev.0.col] = ChessPiece(type: rev.1, color: p.color)
+            }
+        }
+        shapeshiftedPieces.removeAll(where: {$0.2 == 0})
+
+        // Royal Jester revert
+        for i in royalJesterPieces.indices {
+            royalJesterPieces[i].2 -= 1
+        }
+        let revertJester = royalJesterPieces.filter {$0.2 == 0}
+        for rj in revertJester {
+            if let p = board[rj.0.row][rj.0.col], p.type == .pawn {
+                board[rj.0.row][rj.0.col] = ChessPiece(type: rj.1, color: p.color)
+            }
+        }
+        royalJesterPieces.removeAll(where: {$0.2 == 0})
+
+        // Blitz Surge: lasts 1 turn
+        if currentPlayer == .playerOne && blitzSurgeForWhite > 0 {
+            blitzSurgeForWhite -= 1
+        } else if currentPlayer == .playerTwo && blitzSurgeForBlack > 0 {
+            blitzSurgeForBlack -= 1
+        }
+
+        // Ancient Guardian
+        for i in ancientGuardianPieces.indices {
+            ancientGuardianPieces[i].1 -= 1
+        }
+        ancientGuardianPieces = ancientGuardianPieces.filter {$0.1 > 0}
+
         checkForKingCapture()
+        checkForAllPiecesCaptured()
     }
     
     private func checkForKingCapture() {
@@ -1083,13 +1624,21 @@ struct ContentView: View {
     private func validMoves(for pos: Position) -> [Position] {
         guard let piece = board[pos.row][pos.col] else { return [] }
         
+        if mindControlActive, let enemy = mindControlSelectedEnemy, enemy == pos {
+            // Treat as current player's piece (already done by color check)
+        }
+
         let isWhite = (piece.color == .white)
         let knightsAsQueens = ((isWhite && knightsMoveLikeQueensForWhite > 0) || (!isWhite && knightsMoveLikeQueensForBlack > 0)) && piece.type == .knight
         let isTransformedRook = isTransformedIntoRook(pos, piece.color)
         let pawnsAsRooks = (piece.type == .pawn) && ((isWhite && allPawnsRookForWhite > 0) || (!isWhite && allPawnsRookForBlack > 0))
+
+        let pawnderActive = (piece.color == .white && pawnderThatForWhite > 0) || (piece.color == .black && pawnderThatForBlack > 0)
         
         let moves: [Position] = {
-            if knightsAsQueens {
+            if pawnderActive && piece.type == .pawn {
+                return queenMoves(pos: pos, piece: piece)
+            } else if knightsAsQueens {
                 return queenMoves(pos: pos, piece: piece)
             } else if isTransformedRook {
                 return rookMoves(pos: pos, piece: piece)
@@ -1112,6 +1661,12 @@ struct ContentView: View {
                 }
             }
         }()
+
+        // Ancient Guardian cannot move
+        if ancientGuardianPieces.contains(where: {$0.0 == pos}) {
+            return []
+        }
+
         return moves
     }
     
@@ -1259,10 +1814,10 @@ struct ContentView: View {
     }
     
     private func rollNewPowerUps(count: Int) -> [PowerUp] {
+
         var result: [PowerUp] = []
         for _ in 0..<count {
             let roll = Double.random(in: 0...1)
-            // Exotic chance: 1/20 = 0.05
             if roll < 0.05 {
                 let (name, desc, rarity) = exoticPowers.randomElement()!
                 result.append(PowerUp(name: name, description: desc, rarity: rarity, cooldown: 0))
@@ -1282,7 +1837,7 @@ struct ContentView: View {
     
     private func cooldownForRarity(_ rarity: String) -> Int {
         switch rarity {
-        case "Rare": return 3
+        case "Rare": return 4
         case "Epic": return 6
         case "Legendary": return 9
         case "Exotic": return 12
@@ -1291,7 +1846,6 @@ struct ContentView: View {
     }
     
     private func activatePowerUp(for player: Player, index: Int) {
-        // In singleplayer: If player == .playerTwo and gameMode == .singleplayer, ignore user activation (bot only)
         if gameMode == .singleplayer && player == .playerTwo {
             return
         }
@@ -1363,26 +1917,86 @@ struct ContentView: View {
         case "Bargain Hunter":
             bargainHunterModified(for: player)
         case "Shoot, Where, Where?":
-            // Exotic power
             shootSelectionActive = true
             shootSelectingPlayer = player
             shootPhase = 1
         case "It Says Gullible":
-            // Exotic power
             gullibleSelectionActive = true
             gullibleSelectingPlayer = player
             gulliblePhase = 1
+
+        // NEW LEGENDARY/EXOTIC done above
+
+        // ADDED NEW EPIC POWERS:
+        case "Shapeshifter":
+            shapeshifterSelectionActive = true
+            shapeshifterSelectingPlayer = player
+            shapeshifterPhase = 1
+        case "Royal Jester":
+            royalJesterSelectionActive = true
+            royalJesterSelectingPlayer = player
+            royalJesterPhase = 1
+        case "Blitz Surge":
+            blitzSurge(for: player)
+        case "Ancient Guardian":
+            ancientGuardianSelectionActive = true
+            ancientGuardianSelectingPlayer = player
+            ancientGuardianPhase = 1
+        case "Mind Control":
+            mindControlSelectionActive = true
+            mindControlSelectingPlayer = player
+            mindControlPhase = 1
+
         default:
             break
         }
         
         powerUp.cooldown = cooldownForRarity(powerUp.rarity)
     }
+
+    private func blitzSurge(for player: Player) {
+        // Teleport 3 of your own pieces to empty squares on your side
+        // PlayerOne = white side rows 4..7, PlayerTwo = black side rows 0..3
+        let rowsRange = (player == .playerOne) ? 4...7 : 0...3
+        var playerPieces: [Position] = []
+        for r in 0..<8 {
+            for c in 0..<8 {
+                if let p = board[r][c], p.color == player.color {
+                    playerPieces.append(Position(row: r, col: c))
+                }
+            }
+        }
+        playerPieces.shuffle()
+
+        var emptyPositions: [Position] = []
+        for r in rowsRange {
+            for c in 0..<8 {
+                if board[r][c] == nil {
+                    emptyPositions.append(Position(row: r, col: c))
+                }
+            }
+        }
+        emptyPositions.shuffle()
+
+        let toMove = playerPieces.prefix(3)
+        for (i,pos) in toMove.enumerated() {
+            if i < emptyPositions.count {
+                let target = emptyPositions[i]
+                board[target.row][target.col] = board[pos.row][pos.col]
+                board[pos.row][pos.col] = nil
+            }
+        }
+
+        if player == .playerOne {
+            blitzSurgeForWhite = 1
+        } else {
+            blitzSurgeForBlack = 1
+        }
+    }
+
     
-    // Exotic power: Shoot, Where, Where?
     private func clearInFront(of pos: Position, for color: PieceColor) {
         let direction = (color == .white) ? -1 : 1
-        // Clear all squares in front (same column)
         var r = pos.row + direction
         let c = pos.col
         while inBounds(r,c) {
@@ -1391,18 +2005,27 @@ struct ContentView: View {
         }
     }
     
-    // Exotic power: It Says Gullible
     private func freezeAreaAround(pos: Position, turns: Int) {
         for rr in max(0, pos.row-1)...min(7, pos.row+1) {
             for cc in max(0, pos.col-1)...min(7, pos.col+1) {
-                if let p = board[rr][cc] {
-                    // Freeze that piece
+                if let _ = board[rr][cc] {
                     frozenEnemyPieces.append((Position(row:rr,col:cc), turns))
                 }
             }
         }
     }
-    
+
+    private func freezeAround(pos: Position, for player: Player, turns: Int) {
+        let enemyColor = (player.color == .white) ? PieceColor.black : PieceColor.white
+        for rr in max(0, pos.row-1)...min(7, pos.row+1) {
+            for cc in max(0, pos.col-1)...min(7, pos.col+1) {
+                if let p = board[rr][cc], p.color == enemyColor {
+                    frozenEnemyPieces.append((Position(row: rr, col: cc), turns))
+                }
+            }
+        }
+    }
+
     private func timeStopModified(for player: Player) {
         let enemyColor: PieceColor = (player.color == .white) ? .black : .white
         var enemyPositions: [Position] = []
@@ -1436,7 +2059,6 @@ struct ContentView: View {
         }
     }
 
-    
     private func bargainHunterModified(for player: Player) {
         let newUps = rollNewPowerUps(count: 3)
         if player == .playerOne {
@@ -1445,22 +2067,19 @@ struct ContentView: View {
             playerTwoPowerUps = newUps
         }
         
-        // Reset all bishops and knights
         for r in 0..<8 {
             for c in 0..<8 {
-                if let piece = board[r][c], (piece.type == .bishop || piece.type == .knight) {
+                if let p = board[r][c], (p.type == .bishop || p.type == .knight) {
                     board[r][c] = nil
                 }
             }
         }
         
-        // Place white knights and bishops in original positions
         board[7][1] = ChessPiece(type: .knight, color: .white)
         board[7][6] = ChessPiece(type: .knight, color: .white)
         board[7][2] = ChessPiece(type: .bishop, color: .white)
         board[7][5] = ChessPiece(type: .bishop, color: .white)
         
-        // Place black knights and bishops in original positions
         board[0][1] = ChessPiece(type: .knight, color: .black)
         board[0][6] = ChessPiece(type: .knight, color: .black)
         board[0][2] = ChessPiece(type: .bishop, color: .black)
@@ -1824,38 +2443,24 @@ struct ContentView: View {
         }
     }
     
-    // ADDED: Bot logic for singleplayer
     private func doBotTurnIfNeeded() {
         guard gameMode == .singleplayer && currentPlayer == .playerTwo && !showGameOverAlert else { return }
         
-        // Bot uses powers randomly if available
         var usablePowers = playerTwoPowerUps.enumerated().filter { $0.element.cooldown == 0 }
         usablePowers.shuffle()
         
-        // If a power requires selection and is complicated, we might skip. For demonstration let's just use simple powers or random moves:
-        // We'll just try a few times to pick a power that doesn't require manual selection:
-        // If we pick a complex one, we skip it to avoid blocking the bot.
-        // Powers that require selection: Piece Out, Teleportation, Shoot, Where, Where?, It Says Gullible
-        // Let's skip those from bot usage for simplicity.
-        
-        if let (idx, pow) = usablePowers.first(where: { !["Piece Out","Teleportation","Shoot, Where, Where?","It Says Gullible"].contains($0.element.name) }) {
-            // Use that power
+        if let (idx, pow) = usablePowers.first(where: { !["Piece Out","Teleportation","Shoot, Where, Where?","It Says Gullible","Aura","Lock In","Reaper","Shapeshifter","Royal Jester","Blitz Surge","Ancient Guardian","Mind Control"].contains($0.element.name) }) {
             applyPowerUp(&playerTwoPowerUps[idx], for: .playerTwo)
-        } else {
-            // No easy power, skip power usage
         }
         
-        // Make a random move
         let moves = allPossibleMoves(for: .black)
         if let randomMove = moves.randomElement() {
             movePiece(from: randomMove.0, to: randomMove.1)
         } else {
-            // No moves: just end turn if possible
             handleMoveEnd()
         }
     }
     
-    // Helper for bot
     private func allPossibleMoves(for color: PieceColor) -> [(Position, Position)] {
         var result: [(Position,Position)] = []
         for r in 0..<8 {
@@ -1871,4 +2476,62 @@ struct ContentView: View {
         }
         return result
     }
+    
+    private func countPieces(for color: PieceColor) -> Int {
+        var count = 0
+        for row in 0..<8 {
+            for col in 0..<8 {
+                if let p = board[row][col], p.color == color {
+                    count += 1
+                }
+            }
+        }
+        return count
+    }
+    
+    private func checkForAllPiecesCaptured() {
+        let whitePieces = countPieces(for: .white)
+        let blackPieces = countPieces(for: .black)
+        
+        if whitePieces == 0 && blackPieces == 0 {
+            gameOverMessage = "It's a draw!"
+            showGameOverAlert = true
+        } else if whitePieces == 0 {
+            gameOverMessage = "Black wins by capturing all white pieces!"
+            showGameOverAlert = true
+        } else if blackPieces == 0 {
+            gameOverMessage = "White wins by capturing all black pieces!"
+            showGameOverAlert = true
+        }
+    }
+
+    private func isReaperPiece(_ piece: ChessPiece) -> Bool {
+        return reaperPieces.contains(piece.id)
+    }
+
+    private func applyReaperEffect(for player: Player) {
+        let direction = (player == .playerOne) ? -1 : 1
+        for reaperID in reaperPieces {
+            if let (pos,p) = findPieceByID(reaperID), p.color == player.color {
+                let frontRow = pos.row + direction
+                if inBounds(frontRow, pos.col) {
+                    for cc in max(0,pos.col-1)...min(7,pos.col+1) {
+                        board[frontRow][cc] = nil
+                    }
+                }
+            }
+        }
+    }
+
+    private func findPieceByID(_ id: UUID) -> (Position,ChessPiece)? {
+        for r in 0..<8 {
+            for c in 0..<8 {
+                if let p = board[r][c], p.id == id {
+                    return (Position(row:r,col:c), p)
+                }
+            }
+        }
+        return nil
+    }
+
 }

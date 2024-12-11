@@ -1,17 +1,17 @@
 {
   "images" : [
     {
-      "filename" : "atomic2.png",
+      "filename" : "Royal Jester.png",
       "idiom" : "universal",
       "scale" : "1x"
     },
     {
-      "filename" : "atomic2 1.png",
+      "filename" : "Royal Jester 1.png",
       "idiom" : "universal",
       "scale" : "2x"
     },
     {
-      "filename" : "atomic2 2.png",
+      "filename" : "Royal Jester 2.png",
       "idiom" : "universal",
       "scale" : "3x"
     }
