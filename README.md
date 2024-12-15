@@ -2,6 +2,8 @@
 
 **Chess Royale** is an innovative twist on the traditional chess game, combining strategy with a splash of chaos through the introduction of **rare, epic, and legendary power-ups**. This project reimagines chess as an exciting and dynamic experience, where each move could be complemented by game-changing abilities, creating a fresh challenge for players of all skill levels.
 
+**App Store Link:** https://apps.apple.com/us/app/ultimate-chess-royale/id6739193423
+
 ---
 
 ## App Store Description
